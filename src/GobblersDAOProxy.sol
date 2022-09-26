@@ -30,7 +30,7 @@ import './GobblersDAOInterfaces.sol';
 contract GobblersDAOProxyV2 is GobblersDAOStorageV2, GobblersDAOEvents {
     constructor(
         address timelock_,
-        address nouns_,
+        address gobblers_,
         address vetoer_,
         address admin_,
         address implementation_,
@@ -47,7 +47,7 @@ contract GobblersDAOProxyV2 is GobblersDAOStorageV2, GobblersDAOEvents {
             abi.encodeWithSignature(
                 'initialize(address,address,address,uint256,uint256,uint256,(uint16,uint16,uint32))',
                 timelock_,
-                nouns_,
+                gobblers_,
                 vetoer_,
                 votingPeriod_,
                 votingDelay_,

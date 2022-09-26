@@ -7,10 +7,13 @@ import { GobblersDAOProxyV2 } from '../src/GobblersDAOProxy.sol';
 import { GobblersDAOStorageV2, GobblersDAOStorageV1Adjusted } from '../src/GobblersDAOInterfaces.sol';
 import { GobblersDAOExecutor } from '../src/GobblersDAOExecutor.sol';
 
-contract GobblersDAOLogicV2Test is Test, DeployUtils {
+import "./tokens/TestERC721.sol";
+
+contract GobblersDAOLogicV2Test is Test {
     GobblersDAOLogicV2 daoLogic;
     GobblersDAOLogicV2 daoProxy;
-    GobblersToken nounsToken;
+    TestERC721 gobblersToken;
+    uint256 constant TIMELOCK_DELAY = 2 days;
     GobblersDAOExecutor timelock = new GobblersDAOExecutor(address(1), TIMELOCK_DELAY);
     address vetoer = address(0x3);
     address admin = address(0x4);
@@ -28,15 +31,13 @@ contract GobblersDAOLogicV2Test is Test, DeployUtils {
     function setUp() public virtual {
         daoLogic = new GobblersDAOLogicV2();
 
-        GobblersDescriptorV2 descriptor = _deployAndPopulateV2();
-
-        nounsToken = new GobblersToken(noundersDAO, minter, descriptor, new GobblersSeeder(), IProxyRegistry(address(0)));
+        gobblersToken = new TestERC721();
 
         daoProxy = GobblersDAOLogicV2(
             payable(
                 new GobblersDAOProxyV2(
                     address(timelock),
-                    address(nounsToken),
+                    address(gobblersToken),
                     vetoer,
                     admin,
                     address(daoLogic),
@@ -140,10 +141,10 @@ contract CancelProposalTest is GobblersDAOLogicV2Test {
         super.setUp();
 
         vm.prank(minter);
-        nounsToken.mint();
+        gobblersToken.mint(minter, 1);
 
         vm.prank(minter);
-        nounsToken.transferFrom(minter, proposer, 1);
+        gobblersToken.transferFrom(minter, proposer, 1);
 
         vm.roll(block.number + 1);
 
@@ -175,7 +176,7 @@ contract CancelProposalTest is GobblersDAOLogicV2Test {
 
     function testAnyoneCanCancelIfProposerVotesBelowThreshold() public {
         vm.prank(proposer);
-        nounsToken.transferFrom(proposer, address(0x9999), 1);
+        gobblersToken.transferFrom(proposer, address(0x9999), 1);
 
         vm.roll(block.number + 1);
 

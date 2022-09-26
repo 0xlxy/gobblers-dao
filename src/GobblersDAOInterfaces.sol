@@ -153,7 +153,7 @@ contract GobblersDAOStorageV1 is GobblersDAOProxyStorage {
     IGobblersDAOExecutor public timelock;
 
     /// @notice The address of the Gobblers tokens
-    GobblersTokenLike public nouns;
+    GobblersTokenLike public gobblers;
 
     /// @notice The official record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
@@ -253,7 +253,7 @@ contract GobblersDAOStorageV1Adjusted is GobblersDAOProxyStorage {
     IGobblersDAOExecutor public timelock;
 
     /// @notice The address of the Gobblers tokens
-    GobblersTokenLike public nouns;
+    GobblersTokenLike public gobblers;
 
     /// @notice The official record of all proposals ever proposed
     mapping(uint256 => Proposal) internal _proposals;

@@ -112,7 +112,7 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
     /**
      * @notice Used to initialize the contract during delegator contructor
      * @param timelock_ The address of the GobblersDAOExecutor
-     * @param nouns_ The address of the NOUN tokens
+     * @param gobblers_ The address of the gobblers tokens
      * @param vetoer_ The address allowed to unilaterally veto proposals
      * @param votingPeriod_ The initial voting period
      * @param votingDelay_ The initial voting delay
@@ -121,7 +121,7 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
      */
     function initialize(
         address timelock_,
-        address nouns_,
+        address gobblers_,
         address vetoer_,
         uint256 votingPeriod_,
         uint256 votingDelay_,
@@ -133,7 +133,7 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
             revert AdminOnly();
         }
         require(timelock_ != address(0), 'GobblersDAO::initialize: invalid timelock address');
-        require(nouns_ != address(0), 'GobblersDAO::initialize: invalid nouns address');
+        require(gobblers_ != address(0), 'GobblersDAO::initialize: invalid gobblers address');
         require(
             votingPeriod_ >= MIN_VOTING_PERIOD && votingPeriod_ <= MAX_VOTING_PERIOD,
             'GobblersDAO::initialize: invalid voting period'
@@ -152,7 +152,7 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
         emit ProposalThresholdBPSSet(proposalThresholdBPS, proposalThresholdBPS_);
 
         timelock = IGobblersDAOExecutor(timelock_);
-        nouns = GobblersTokenLike(nouns_);
+        gobblers = GobblersTokenLike(gobblers_);
         vetoer = vetoer_;
         votingPeriod = votingPeriod_;
         votingDelay = votingDelay_;
@@ -190,12 +190,12 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
     ) public returns (uint256) {
         ProposalTemp memory temp;
 
-        temp.totalSupply = nouns.totalSupply();
+        temp.totalSupply = gobblers.totalSupply();
 
         temp.proposalThreshold = bps2Uint(proposalThresholdBPS, temp.totalSupply);
 
         require(
-            nouns.getPriorVotes(msg.sender, block.number - 1) > temp.proposalThreshold,
+            gobblers.getPriorVotes(msg.sender, block.number - 1) > temp.proposalThreshold,
             'GobblersDAO::propose: proposer votes below proposal threshold'
         );
         require(
@@ -351,7 +351,7 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
         Proposal storage proposal = _proposals[proposalId];
         require(
             msg.sender == proposal.proposer ||
-                nouns.getPriorVotes(proposal.proposer, block.number - 1) <= proposal.proposalThreshold,
+                gobblers.getPriorVotes(proposal.proposer, block.number - 1) <= proposal.proposalThreshold,
             'GobblersDAO::cancel: proposer above threshold'
         );
 
@@ -607,7 +607,7 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
         require(receipt.hasVoted == false, 'GobblersDAO::castVoteInternal: voter already voted');
 
         /// @notice: Unlike GovernerBravo, votes are considered from the block the proposal was created in order to normalize quorumVotes and proposalThreshold metrics
-        uint96 votes = nouns.getPriorVotes(voter, proposalCreationBlock(proposal));
+        uint96 votes = gobblers.getPriorVotes(voter, proposalCreationBlock(proposal));
 
         if (support == 0) {
             proposal.againstVotes = proposal.againstVotes + votes;
@@ -906,7 +906,7 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
      * Differs from `GovernerBravo` which uses fixed amount
      */
     function proposalThreshold() public view returns (uint256) {
-        return bps2Uint(proposalThresholdBPS, nouns.totalSupply());
+        return bps2Uint(proposalThresholdBPS, gobblers.totalSupply());
     }
 
     function proposalCreationBlock(Proposal storage proposal) internal view returns (uint256) {
@@ -1040,14 +1040,14 @@ contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
      * @notice Current min quorum votes using Noun total supply
      */
     function minQuorumVotes() public view returns (uint256) {
-        return bps2Uint(getDynamicQuorumParamsAt(block.number).minQuorumVotesBPS, nouns.totalSupply());
+        return bps2Uint(getDynamicQuorumParamsAt(block.number).minQuorumVotesBPS, gobblers.totalSupply());
     }
 
     /**
      * @notice Current max quorum votes using Noun total supply
      */
     function maxQuorumVotes() public view returns (uint256) {
-        return bps2Uint(getDynamicQuorumParamsAt(block.number).maxQuorumVotesBPS, nouns.totalSupply());
+        return bps2Uint(getDynamicQuorumParamsAt(block.number).maxQuorumVotesBPS, gobblers.totalSupply());
     }
 
     function bps2Uint(uint256 bps, uint256 number) internal pure returns (uint256) {
