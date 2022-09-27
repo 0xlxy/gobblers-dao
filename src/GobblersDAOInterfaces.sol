@@ -7,17 +7,74 @@
 // https://github.com/compound-finance/compound-protocol/blob/b9b14038612d846b83f8a009a82c38974ff2dcfe/contracts/Governance/GovernorBravoInterfaces.sol
 //
 // GovernorBravoInterfaces.sol source code Copyright 2020 Compound Labs, Inc. licensed under the BSD-3-Clause license.
-// With modifications by Nounders DAO.
-//
 // Additional conditions of BSD-3-Clause can be found here: https://opensource.org/licenses/BSD-3-Clause
 //
 // MODIFICATIONS
-// GobblersDAOEvents, GobblersDAOProxyStorage, GobblersDAOStorageV1 add support for changes made by Gobblers DAO to GovernorBravo.sol
+// GobblersDAOEvents, GobblersDAOProxyStorage, GobblersDAOStorageV1 add support for changes to GovernorBravo.sol
 // See GobblersDAOLogicV1.sol for more details.
-// GobblersDAOStorageV1Adjusted and GobblersDAOStorageV2 add support for a dynamic vote quorum.
+// GobblersDAOStorageV2 add support for a dynamic vote quorum.
 // See GobblersDAOLogicV2.sol for more details.
 
 pragma solidity >=0.8.0;
+
+/*                                                                              **,/*,
+                                                                     *%@&%#/*,,..........,/(%&@@#*
+                                                                 %@%,..............................#@@%
+                                                              &&,.....,,...............................,/&@*
+                                                            (@*.....**............,/,.......................(@%
+                                                           &&......*,............./,.............**............&@
+                                                          @#......**.............**..............,*........,*,..,@/
+                                                         /@......,/............../,..............,*........../,..*@.
+                                                        #@,......................*.............../,..........**...#/
+                                                      ,@&,.......................................*..........,/....(@
+                                                  *@&(*...................................................../*....(@
+                                                 @(..*%@@&%#(#@@@%%%%%&&@@@@@@@@@&&#(///..........................#@
+                                                 @%/@@@&%&&&@@&%%%%%%%#(/(((/(/(/(/(/(/(/(/(%%&@@@%(/,............#&
+                                                  @@@#/**./@%%%&%#/*************./(%@@@@&(*********(@&&@@@%(.....,&@
+                                                 ,@/.//(&@@/.     .#@%/******./&&*,      ./@&********%@/**(@#@@#,..(@
+                                                 #%****%@.           %@/****./&@      ,.    %&********%@(**&@...(@#.#@
+                                                 &#**./@/  %@&&      .@#****./@*    &@@@@&  .@/******./@@((((@&....(@
+                                                 ##**./&@ ,&@@@,     #@/****./@@      @@.  .@&*******./@%****%@@@(,
+                                                 ,@/**./%@(.      .*@@/********(&@#*,,,,/&@%/*******./@@&&&@@@#
+                                                   @&/**@&/%&&&&&%/**.//////*********./************./@&******@*
+                                                     /@@@@&(////#%&@@&(**./#&@@&(//*************./&@(********#@
+                                                       .@#**.///*****************(#@@@&&&&&@@@@&%(**********./@,
+                                                       @(*****%@#*********************&@#*********************(@
+                                                       @****./@#*./@@#//***.///(%@%*****%@*********************#@
+                                                      #&****./@%************************&@**********************@%
+                                                     .@/******.//*******************./@@(************************@/
+                                                     /@**********************************************************(@,
+                                                     @#*****************************************************%@@@@@@@.
+                                                    *@/*************************************************************#@(
+                                                    @%***************************************************************./@(
+                     /@@&&&@@                     .@/*******************************************************************&@
+                    @%######%@.                   @#***************************./%&&&%(**************#%******************&#
+                    @%######&@%&@@.             ,@(***./&#********************#@&#####%@&*************&%****************./@,
+               &&*,/@%######&@@@*.*@&,         @@****./@&*******************./%@#######%@#***********./@&*****************(@
+              ((...*%@&##%@@,..........,,,,%@&@%/*****&%****************./&@#*%@#######&@*#@%*********./@&*****************(@,
+              (@#....(@%#&&,...,/...........@(*******(@(****************(@/...*%@@@@@@%*....&@@@@&@@@@@@%/%@@##(************(@.
+              ((./(((%@%#&@/,/&@/...........%&*******%@****************./@%,.................#,............/@%***************#@
+              *@@####@@%###%&@(@(...........%&*******%@****************%@,,#%/..............................#@/***************&/
+              (#.....,&&####&@..%%..........%%*****(@@#****************#@,...................................@(***************(@
+              .@@&%%&@@&####&&.............,@(***%@(**********./#%%%%%##&@&#(,...............................#@****************&.
+               &#.....(@%###&@*............%@**%@(*******(&@&%#/////////@%...................................#@***************&@
+                 #@@@@&%####&@&&&,........%@./@%*****(@@%////////////////@@@%,...............................#@**************#@
+                     @@&&&&@@(    /&@@&%%@&@@@%**./&@(///////////////////@%.................................,@(*********./%@&.
+                      (@//@%                @%***&&(//////////////////////(&@(**,,,,./(%&@@@%/*,,****,,***./@@&&&&&&&&#//%@
+                      (@//%@               (@(*#@#////////////////////////////%@@%%%&@@#////%@/***************************&&
+                      (@//%@  .,,,,/#&&&&&&@&*#@#///////////////////////////////@%//&&///////#@(***************************@&(#@@@@@&(*.
+               ,@@@@@&&@//%@,,.,,,,,.,..,,#@./@%////////////////////////////////%@**&&////////(@(**************************&#,,,,,,,,,,,,/(#&@&
+          &@%*,,,,,,,,#@//%@,,,,,,,,,,,,,,&%*#@(////////////////////////////////%@**&&/////////&@**************************#@.,,,.,,.,,&#.,,...,%@
+       (@/,,,,,,,,,,,,(@(/%@,,,,,,,,,,,,,,&%*#@(////////////////////////////////%@./%@/////////#@(*************************&%,,,(%@@@@#*,.     .,/@.
+      &%..    *&@%/,.,#@(*#@*,,.,,,,,,,,,,%@/#@(////////////////////////////////%@**#@/////////#@(*****************.//#%@@@@%%(/,...        ...,,,%&
+     ,@*.,.       ../((%&&@@@&%#((///,,,,,/@&(@(////////////////////////////////@&**#@/////////%@%###%&&&&@@@@@@%%#(**,,,,,,.         ..,,,,,,,,,,%#
+      @(,,,,,..,            ,..   ..,,,**(%%%&@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%%(((,,.,.,,,,,,.,..,,,,.,.,,,,.,..,.,,.,,,,,.,,,,,,,,,.*@%
+       @%,,,,,,,,,,,,,,,.,.,,,      .,.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,.,,,.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,.,.,,,,,,#@@,
+        ,@@(,.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,.,,.,,.,.,./#%&@@@@@#
+         .@#&@@@@@%*,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,/&@@@@@%&@%((((#@@.
+          .@%((((#@@@/#&@@@@&%#/*,.,..,,,,.,,,,,.,.,,,,,,,,,,,,,,,,..,.,..,,...,,,...,,,,,,.,,,,,,,,,,,../#%&@@@@@@@&%((///*********./(((/&&
+             %@&%%#/***********./////(((((((####%%&&@@@@@@@@@@@@@@&@@@@@@@@@@@@@@@@&&%%%%%%%%#((((((((%@&#(((((#%@%/*******************./*/
+
 
 contract GobblersDAOEvents {
     /// @notice An event emitted when a new proposal is created
@@ -91,9 +148,7 @@ contract GobblersDAOEvents {
 
     /// @notice Emitted when vetoer is changed
     event NewVetoer(address oldVetoer, address newVetoer);
-}
 
-contract GobblersDAOEventsV2 is GobblersDAOEvents {
     /// @notice Emitted when minQuorumVotesBPS is set
     event MinQuorumVotesBPSSet(uint16 oldMinQuorumVotesBPS, uint16 newMinQuorumVotesBPS);
 
@@ -126,111 +181,11 @@ contract GobblersDAOProxyStorage {
 
 /**
  * @title Storage for Governor Bravo Delegate
- * @notice For future upgrades, do not change GobblersDAOStorageV1. Create a new
- * contract which implements GobblersDAOStorageV1 and following the naming convention
- * GobblersDAOStorageVX.
- */
-contract GobblersDAOStorageV1 is GobblersDAOProxyStorage {
-    /// @notice Vetoer who has the ability to veto any proposal
-    address public vetoer;
-
-    /// @notice The delay before voting on a proposal may take place, once proposed, in blocks
-    uint256 public votingDelay;
-
-    /// @notice The duration of voting on a proposal, in blocks
-    uint256 public votingPeriod;
-
-    /// @notice The basis point number of votes required in order for a voter to become a proposer. *DIFFERS from GovernerBravo
-    uint256 public proposalThresholdBPS;
-
-    /// @notice The basis point number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed. *DIFFERS from GovernerBravo
-    uint256 public quorumVotesBPS;
-
-    /// @notice The total number of proposals
-    uint256 public proposalCount;
-
-    /// @notice The address of the Gobblers DAO Executor GobblersDAOExecutor
-    IGobblersDAOExecutor public timelock;
-
-    /// @notice The address of the Gobblers tokens
-    GobblersTokenLike public gobblers;
-
-    /// @notice The official record of all proposals ever proposed
-    mapping(uint256 => Proposal) public proposals;
-
-    /// @notice The latest proposal for each proposer
-    mapping(address => uint256) public latestProposalIds;
-
-    struct Proposal {
-        /// @notice Unique id for looking up a proposal
-        uint256 id;
-        /// @notice Creator of the proposal
-        address proposer;
-        /// @notice The number of votes needed to create a proposal at the time of proposal creation. *DIFFERS from GovernerBravo
-        uint256 proposalThreshold;
-        /// @notice The number of votes in support of a proposal required in order for a quorum to be reached and for a vote to succeed at the time of proposal creation. *DIFFERS from GovernerBravo
-        uint256 quorumVotes;
-        /// @notice The timestamp that the proposal will be available for execution, set once the vote succeeds
-        uint256 eta;
-        /// @notice the ordered list of target addresses for calls to be made
-        address[] targets;
-        /// @notice The ordered list of values (i.e. msg.value) to be passed to the calls to be made
-        uint256[] values;
-        /// @notice The ordered list of function signatures to be called
-        string[] signatures;
-        /// @notice The ordered list of calldata to be passed to each call
-        bytes[] calldatas;
-        /// @notice The block at which voting begins: holders must delegate their votes prior to this block
-        uint256 startBlock;
-        /// @notice The block at which voting ends: votes must be cast prior to this block
-        uint256 endBlock;
-        /// @notice Current number of votes in favor of this proposal
-        uint256 forVotes;
-        /// @notice Current number of votes in opposition to this proposal
-        uint256 againstVotes;
-        /// @notice Current number of votes for abstaining for this proposal
-        uint256 abstainVotes;
-        /// @notice Flag marking whether the proposal has been canceled
-        bool canceled;
-        /// @notice Flag marking whether the proposal has been vetoed
-        bool vetoed;
-        /// @notice Flag marking whether the proposal has been executed
-        bool executed;
-        /// @notice Receipts of ballots for the entire set of voters
-        mapping(address => Receipt) receipts;
-    }
-
-    /// @notice Ballot receipt record for a voter
-    struct Receipt {
-        /// @notice Whether or not a vote has been cast
-        bool hasVoted;
-        /// @notice Whether or not the voter supports the proposal or abstains
-        uint8 support;
-        /// @notice The number of votes the voter had, which were cast
-        uint96 votes;
-    }
-
-    /// @notice Possible states that a proposal may be in
-    enum ProposalState {
-        Pending,
-        Active,
-        Canceled,
-        Defeated,
-        Succeeded,
-        Queued,
-        Expired,
-        Executed,
-        Vetoed
-    }
-}
-
-/**
- * @title Extra fields added to the `Proposal` struct from GobblersDAOStorageV1
  * @notice The following fields were added to the `Proposal` struct:
  * - `Proposal.totalSupply`
  * - `Proposal.creationBlock`
  */
-contract GobblersDAOStorageV1Adjusted is GobblersDAOProxyStorage {
+contract GobblersDAOStorageV1 is GobblersDAOProxyStorage {
     /// @notice Vetoer who has the ability to veto any proposal
     address public vetoer;
 
@@ -334,7 +289,7 @@ contract GobblersDAOStorageV1Adjusted is GobblersDAOProxyStorage {
  * contract which implements GobblersDAOStorageV2 and following the naming convention
  * GobblersDAOStorageVX.
  */
-contract GobblersDAOStorageV2 is GobblersDAOStorageV1Adjusted {
+contract GobblersDAOStorageV2 is GobblersDAOStorageV1 {
     DynamicQuorumParamsCheckpoint[] public quorumParamsCheckpoints;
 
     /// @notice Pending new vetoer

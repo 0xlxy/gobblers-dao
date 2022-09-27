@@ -2,16 +2,16 @@
 pragma solidity >=0.8.0;
 
 import 'forge-std/Test.sol';
-import { GobblersDAOLogicV2 } from '../src/GobblersDAOLogic.sol';
-import { GobblersDAOProxyV2 } from '../src/GobblersDAOProxy.sol';
-import { GobblersDAOStorageV2, GobblersDAOStorageV1Adjusted } from '../src/GobblersDAOInterfaces.sol';
+import { GobblersDAOLogic } from '../src/GobblersDAOLogic.sol';
+import { GobblersDAOProxy } from '../src/GobblersDAOProxy.sol';
+import { GobblersDAOStorageV2, GobblersDAOStorageV1 } from '../src/GobblersDAOInterfaces.sol';
 import { GobblersDAOExecutor } from '../src/GobblersDAOExecutor.sol';
 
 import "./tokens/TestERC721.sol";
 
-contract GobblersDAOLogicV2Test is Test {
-    GobblersDAOLogicV2 daoLogic;
-    GobblersDAOLogicV2 daoProxy;
+contract GobblersDAOLogicTest is Test {
+    GobblersDAOLogic daoLogic;
+    GobblersDAOLogic daoProxy;
     TestERC721 gobblersToken;
     uint256 constant TIMELOCK_DELAY = 2 days;
     GobblersDAOExecutor timelock = new GobblersDAOExecutor(address(1), TIMELOCK_DELAY);
@@ -29,13 +29,13 @@ contract GobblersDAOLogicV2Test is Test {
     event Withdraw(uint256 amount, bool sent);
 
     function setUp() public virtual {
-        daoLogic = new GobblersDAOLogicV2();
+        daoLogic = new GobblersDAOLogic();
 
         gobblersToken = new TestERC721();
 
-        daoProxy = GobblersDAOLogicV2(
+        daoProxy = GobblersDAOLogic(
             payable(
-                new GobblersDAOProxyV2(
+                new GobblersDAOProxy(
                     address(timelock),
                     address(gobblersToken),
                     vetoer,
@@ -60,13 +60,13 @@ contract GobblersDAOLogicV2Test is Test {
     }
 }
 
-contract UpdateVetoerTest is GobblersDAOLogicV2Test {
+contract UpdateVetoerTest is GobblersDAOLogicTest {
     function setUp() public override {
         super.setUp();
     }
 
     function test_setPendingVetoer_failsIfNotCurrentVetoer() public {
-        vm.expectRevert(GobblersDAOLogicV2.VetoerOnly.selector);
+        vm.expectRevert(GobblersDAOLogic.VetoerOnly.selector);
         daoProxy._setPendingVetoer(address(0x1234));
     }
 
@@ -89,7 +89,7 @@ contract UpdateVetoerTest is GobblersDAOLogicV2Test {
         vm.prank(vetoer);
         daoProxy._setPendingVetoer(pendingVetoer);
 
-        vm.expectRevert(GobblersDAOLogicV2.PendingVetoerOnly.selector);
+        vm.expectRevert(GobblersDAOLogic.PendingVetoerOnly.selector);
         daoProxy._acceptVetoer();
 
         vm.prank(pendingVetoer);
@@ -127,14 +127,14 @@ contract UpdateVetoerTest is GobblersDAOLogicV2Test {
         daoProxy._burnVetoPower();
 
         vm.prank(pendingVetoer);
-        vm.expectRevert(GobblersDAOLogicV2.PendingVetoerOnly.selector);
+        vm.expectRevert(GobblersDAOLogic.PendingVetoerOnly.selector);
         daoProxy._acceptVetoer();
 
         assertEq(daoProxy.pendingVetoer(), address(0));
     }
 }
 
-contract CancelProposalTest is GobblersDAOLogicV2Test {
+contract CancelProposalTest is GobblersDAOLogicTest {
     uint256 proposalId;
 
     function setUp() public override {
@@ -164,14 +164,14 @@ contract CancelProposalTest is GobblersDAOLogicV2Test {
         vm.prank(proposer);
         daoProxy.cancel(proposalId);
 
-        assertEq(uint256(daoProxy.state(proposalId)), uint256(GobblersDAOStorageV1Adjusted.ProposalState.Canceled));
+        assertEq(uint256(daoProxy.state(proposalId)), uint256(GobblersDAOStorageV1.ProposalState.Canceled));
     }
 
     function testNonProposerCantCancel() public {
         vm.expectRevert('GobblersDAO::cancel: proposer above threshold');
         daoProxy.cancel(proposalId);
 
-        assertEq(uint256(daoProxy.state(proposalId)), uint256(GobblersDAOStorageV1Adjusted.ProposalState.Pending));
+        assertEq(uint256(daoProxy.state(proposalId)), uint256(GobblersDAOStorageV1.ProposalState.Pending));
     }
 
     function testAnyoneCanCancelIfProposerVotesBelowThreshold() public {
@@ -182,11 +182,11 @@ contract CancelProposalTest is GobblersDAOLogicV2Test {
 
         daoProxy.cancel(proposalId);
 
-        assertEq(uint256(daoProxy.state(proposalId)), uint256(GobblersDAOStorageV1Adjusted.ProposalState.Canceled));
+        assertEq(uint256(daoProxy.state(proposalId)), uint256(GobblersDAOStorageV1.ProposalState.Canceled));
     }
 }
 
-contract WithdrawTest is GobblersDAOLogicV2Test {
+contract WithdrawTest is GobblersDAOLogicTest {
     function setUp() public override {
         super.setUp();
     }
@@ -207,7 +207,7 @@ contract WithdrawTest is GobblersDAOLogicV2Test {
     }
 
     function test_withdraw_revertsForNonAdmin() public {
-        vm.expectRevert(GobblersDAOLogicV2.AdminOnly.selector);
+        vm.expectRevert(GobblersDAOLogic.AdminOnly.selector);
         daoProxy._withdraw();
     }
 }

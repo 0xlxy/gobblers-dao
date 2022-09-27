@@ -1,47 +1,94 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-/// @title The Gobblers DAO logic version 2
+/// @title Gobblers DAO logic
 
 // LICENSE
-// GobblersDAOLogicV2.sol is a modified version of Compound Lab's GovernorBravoDelegate.sol:
+// GobblersDAOLogic.sol is a modified version of Compound Lab's GovernorBravoDelegate.sol:
 // https://github.com/compound-finance/compound-protocol/blob/b9b14038612d846b83f8a009a82c38974ff2dcfe/contracts/Governance/GovernorBravoDelegate.sol
 //
 // GovernorBravoDelegate.sol source code Copyright 2020 Compound Labs, Inc. licensed under the BSD-3-Clause license.
-// With modifications by Nounders DAO.
-//
 // Additional conditions of BSD-3-Clause can be found here: https://opensource.org/licenses/BSD-3-Clause
 //
 // MODIFICATIONS
-// See GobblersDAOLogicV1 for initial GovernorBravoDelegate modifications.
-
-// GobblersDAOLogicV2 adds:
+// GobblersDAOLogic adds:
+// - Proposal Threshold basis points instead of fixed number
+// - Quorum Votes basis points instead of fixed number
+// - Per proposal storing of fixed `proposalThreshold`
+//   and `quorumVotes` calculated using the Gobbler token's total supply
+// - `ProposalCreatedWithRequirements` event that emits `ProposalCreated` parameters
+// - Votes are counted from the block a proposal is created
+// - Veto ability which allows `veteor` to halt any proposal
 // - `quorumParamsCheckpoints`, which store dynamic quorum parameters checkpoints
-// to be used when calculating the dynamic quorum.
 // - `_setDynamicQuorumParams(DynamicQuorumParams memory params)`, which allows the
 // DAO to update the dynamic quorum parameters' values.
 // - `getDynamicQuorumParamsAt(uint256 blockNumber_)`
-// - Individual setters of the DynamicQuorumParams members:
-//    - `_setMinQuorumVotesBPS(uint16 newMinQuorumVotesBPS)`
-//    - `_setMaxQuorumVotesBPS(uint16 newMaxQuorumVotesBPS)`
-//    - `_setQuorumCoefficient(uint32 newQuorumCoefficient)`
-// - `minQuorumVotes` and `maxQuorumVotes`, which returns the current min and
-// max quorum votes using the current Noun supply.
+// - Individual setters of the DynamicQuorumParams members
+// - `minQuorumVotes` and `maxQuorumVotes`
 // - New `Proposal` struct member:
 //    - `totalSupply` used in dynamic quorum calculation.
-//    - `creationBlock` used for retrieving checkpoints of votes and dynamic quorum params. This now
-// allows changing `votingDelay` without affecting the checkpoints lookup.
-// - `quorumVotes(uint256 proposalId)`, which calculates and returns the dynamic
-// quorum for a specific proposal.
+//    - `creationBlock` used for retrieving checkpoints of votes and dynamic quorum params.
+// - `quorumVotes(uint256 proposalId)`, which calculates and returns the dynamic quorum
 // - `proposals(uint256 proposalId)` instead of the implicit getter, to avoid stack-too-deep error
 //
-// GobblersDAOLogicV2 removes:
+// GobblersDAOLogic removes:
+// - `initialProposalId` and `_initiate()`
+// - Value passed along using `timelock.executeTransaction{value: proposal.value}`
+//   in `execute(uint proposalId)`.
 // - `quorumVotes()` has been replaced by `quorumVotes(uint256 proposalId)`.
 
 pragma solidity >=0.8.0;
 
+/*                                                                %#/*********(&,
+                                                              .#*********************#.
+                                                            #****./*********************%
+                                                          %*******************************%
+                                                        &**********************************,((
+                                                       @(*,***********************************#&
+                                                    (*********************#***********************(
+                                                  ,%@/**************#%***%**&***%*******************,
+                                                  /********************#****#*#******,**************%
+                                                 ,************,#(*****************(#/&(*,*,*********#
+                                                 **************(%%(&************#@%(///************(
+                                                ./**************,*./##****************************#*%
+                                               #**&**************************************************&@@@@@&@&%#((./.
+                                              (*******************@&%&@@@.   /    %  &********(@/,****,,,*,,,****,,*,**********,*,
+                                             &******************#  /    *     /   /    .. %/****(******************,**&***********./
+                                  /%(*******************&***./#    #.#%%    .,    .,   ##&&@****#***********************************.
+                         *#(*,**************************(***(///.*     *     #     #   .  %*****(/*************************************&
+                 *(***********************************.//****&    #     #    (#&((%@*,*&(******(%************./@#*   *%&%(/&*************(
+               #,**************************************,&******&..*#&(*****,,,,/********************************             (/******,**,**,
+              %*****************************************.//**************#**************************************               .(***********#
+             (*************************./************************************************************************              @**************
+             ,**********&@@@&&%#        &,**********************************************************************@             ./*,%*,********./
+            ***********                .************@(*************(&#///////////////.//#&%/*****************&*,,                &************%
+           (**********.                 .%********************(&./////////////////////////////(%******************                *(**&,&##*
+          #**********(,                &,*./***************%(///////////////////////////////////*&****************
+        (************%                %,*****************&///////////////////////////////////////*(***************.
+      .(***************(             #******************&//////////////////////////////////////////****************
+     .&*************%*./            .*******************%/////////////////////////////////////////****************##
+      .*************%*%             (********************#(///////////////////////////////////(#*****************&**,***,.
+           #***./,***%              #**********************,%%*./////////////////////////*(@*******************(/****./********,((
+           @@,                    &**@*****************************./(%@&%%((((((%&&%(*********************************&,**********.
+                         .   .#,,*****./&/*****************************************************************************************
+                          %,******************************************************************************************************#
+                       %*******@*****************************************************./#%%,...((,           .,********************(
+                     ,*******************************@&(**./%&%*        .,//(//////////,                           ,************./
+                      /**************************&*                      ////*(/////////                            ***(*********%
+                       (*********************(#                         ..///////////(//(                          .***********./
+                         #******************%                       *..,,,(//////////(//(*.//,                     %***************&
+                           %*****************                   ////////&&&&&&&&%#(//(&@&#(#@@                    &*********************#
+                             #****************.                 ,//(//////(@@%%%%%///////****&                   &************************(
+                           .**&***(************./               .@.,(///(/(.//(***((*(//*****@/&                ,*************************./
+                            &********************#             .(#(@#//(****(//(*****(/(&(..&(                  ./*********************(#.
+                        #/***********************./          /,,./*((#%@(%&%(((((((#%&&&/(#(#@(
+                      #*,***********************,*&                 .%@@@&#,  ///(/*
+                     (*************************%                             ..(/,./(,.,*
+                      /#/*./(%&(.*/
+
+
 import './GobblersDAOInterfaces.sol';
 
-contract GobblersDAOLogicV2 is GobblersDAOStorageV2, GobblersDAOEventsV2 {
+contract GobblersDAOLogic is GobblersDAOStorageV2, GobblersDAOEvents {
     /// @notice The name of this contract
     string public constant name = 'Gobblers DAO';
 
